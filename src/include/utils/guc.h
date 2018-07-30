@@ -272,6 +272,8 @@ extern int	tcp_keepalives_count;
 extern bool trace_sort;
 #endif
 
+extern PGDLLIMPORT bool edgedb_include_typeoids_in_output;
+
 /*
  * Functions exported by guc.c
  */

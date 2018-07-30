@@ -28,6 +28,7 @@
 #include "utils/arrayaccess.h"
 #include "utils/builtins.h"
 #include "utils/datum.h"
+#include "utils/guc.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/typcache.h"
@@ -1591,7 +1592,9 @@ array_send(PG_FUNCTION_ARGS)
 	/* Send the array header information */
 	pq_sendint(&buf, ndim, 4);
 	pq_sendint(&buf, AARR_HASNULL(v) ? 1 : 0, 4);
-	pq_sendint(&buf, element_type, sizeof(Oid));
+	if (edgedb_include_typeoids_in_output) {
+		pq_sendint(&buf, element_type, sizeof(Oid));
+	}
 	for (i = 0; i < ndim; i++)
 	{
 		pq_sendint(&buf, dim[i], 4);

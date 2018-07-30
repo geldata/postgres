@@ -473,6 +473,8 @@ int			tcp_keepalives_idle;
 int			tcp_keepalives_interval;
 int			tcp_keepalives_count;
 
+bool		edgedb_include_typeoids_in_output = true;
+
 /*
  * SSL renegotiation was been removed in PostgreSQL 9.5, but we tolerate it
  * being set to zero (meaning never renegotiate) for backward compatibility.
@@ -802,6 +804,18 @@ static const unit_conversion time_unit_conversion_table[] =
 
 static struct config_bool ConfigureNamesBool[] =
 {
+	{
+		{"edgedb_include_typeoids_in_output", PGC_USERSET, CLIENT_CONN,
+			gettext_noop("EdgeDB: include typeoids in output."),
+			NULL
+		},
+		&edgedb_include_typeoids_in_output,
+		true,
+		NULL, NULL, NULL
+	},
+
+	/* end of EdgeDB custom settings */
+
 	{
 		{"enable_seqscan", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enables the planner's use of sequential-scan plans."),
