@@ -23,6 +23,7 @@
 #include "libpq/pqformat.h"
 #include "miscadmin.h"
 #include "utils/builtins.h"
+#include "utils/guc.h"
 #include "utils/lsyscache.h"
 #include "utils/typcache.h"
 
@@ -732,7 +733,10 @@ record_send(PG_FUNCTION_ARGS)
 		if (att->attisdropped)
 			continue;
 
-		pq_sendint32(&buf, column_type);
+		if (edgedb_use_typeoids)
+		{
+			pq_sendint32(&buf, column_type);
+		}
 
 		if (nulls[i])
 		{

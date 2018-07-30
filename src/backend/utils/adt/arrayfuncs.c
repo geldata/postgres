@@ -29,6 +29,7 @@
 #include "utils/arrayaccess.h"
 #include "utils/builtins.h"
 #include "utils/datum.h"
+#include "utils/guc.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/typcache.h"
@@ -1307,13 +1308,20 @@ array_recv(PG_FUNCTION_ARGS)
 				(errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
 				 errmsg("invalid array flags")));
 
-	element_type = pq_getmsgint(buf, sizeof(Oid));
-	if (element_type != spec_element_type)
+	if (edgedb_use_typeoids)
 	{
-		/* XXX Can we allow taking the input element type in any cases? */
-		ereport(ERROR,
-				(errcode(ERRCODE_DATATYPE_MISMATCH),
-				 errmsg("wrong element type")));
+		element_type = pq_getmsgint(buf, sizeof(Oid));
+		if (element_type != spec_element_type)
+		{
+			/* XXX Can we allow taking the input element type in any cases? */
+			ereport(ERROR,
+					(errcode(ERRCODE_DATATYPE_MISMATCH),
+					 errmsg("wrong element type")));
+		}
+	}
+	else
+	{
+		element_type = spec_element_type;
 	}
 
 	for (i = 0; i < ndim; i++)
@@ -1604,7 +1612,10 @@ array_send(PG_FUNCTION_ARGS)
 	/* Send the array header information */
 	pq_sendint32(&buf, ndim);
 	pq_sendint32(&buf, AARR_HASNULL(v) ? 1 : 0);
-	pq_sendint32(&buf, element_type);
+	if (edgedb_use_typeoids)
+	{
+		pq_sendint32(&buf, element_type);
+	}
 	for (i = 0; i < ndim; i++)
 	{
 		pq_sendint32(&buf, dim[i]);
