@@ -435,7 +435,7 @@ ConstructTupleDescriptor(Relation heapRelation,
 			 */
 			CheckAttributeType(NameStr(to->attname),
 							   to->atttypid, to->attcollation,
-							   NIL, false);
+							   NIL, 0);
 		}
 
 		/*

@@ -19,6 +19,10 @@
 #include "parser/parse_node.h"
 
 
+/* flag bits for CheckAttributeType/CheckAttributeNamesTypes */
+#define CHKATYPE_ANYARRAY		0x01	/* allow ANYARRAY */
+#define CHKATYPE_ANYRECORD		0x02	/* allow RECORD and RECORD[] */
+
 typedef struct RawColumnDefault
 {
 	AttrNumber	attnum;			/* attribute to attach default to */
@@ -133,12 +137,12 @@ extern Form_pg_attribute SystemAttributeByName(const char *attname,
 					  bool relhasoids);
 
 extern void CheckAttributeNamesTypes(TupleDesc tupdesc, char relkind,
-						 bool allow_system_table_mods);
+						 int flags);
 
 extern void CheckAttributeType(const char *attname,
 				   Oid atttypid, Oid attcollation,
 				   List *containing_rowtypes,
-				   bool allow_system_table_mods);
+				   int flags);
 
 /* pg_partitioned_table catalog manipulation functions */
 extern void StorePartitionKey(Relation rel,
