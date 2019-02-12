@@ -15,6 +15,10 @@ OBJS = \
 	parse_manifest.o \
 	pg_verifybackup.o
 
+ifeq ($(with_ssl),openssl)
+LIBS += $(OPENSSL_LIBS)
+endif
+
 all: pg_verifybackup
 
 pg_verifybackup: $(OBJS) | submake-libpq submake-libpgport submake-libpgfeutils

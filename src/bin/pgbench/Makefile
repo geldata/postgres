@@ -20,6 +20,9 @@ override CFLAGS += $(PTHREAD_CFLAGS)
 endif
 LIBS += $(PTHREAD_LIBS)
 
+ifeq ($(with_ssl),openssl)
+LIBS += $(OPENSSL_LIBS)
+endif
 
 all: pgbench
 
