@@ -31,6 +31,7 @@ OBJS = \
 
 ifeq ($(with_ssl),openssl)
 OBJS += be-secure-openssl.o
+LIBS += $(OPENSSL_LIBS)
 endif
 
 ifeq ($(with_gssapi),yes)

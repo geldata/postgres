@@ -91,6 +91,7 @@ OBJS_COMMON += \
 	cryptohash_openssl.o \
 	hmac_openssl.o \
 	protocol_openssl.o
+LIBS += $(OPENSSL_LIBS)
 else
 OBJS_COMMON += \
 	cryptohash.o \

@@ -23,6 +23,9 @@ override CPPFLAGS += -DFD_SETSIZE=1024
 endif
 LIBS += $(PTHREAD_LIBS)
 
+ifeq ($(with_ssl),openssl)
+LIBS += $(OPENSSL_LIBS)
+endif
 
 all: pgbench
 

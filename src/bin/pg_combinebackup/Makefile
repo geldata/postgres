@@ -28,6 +28,10 @@ OBJS = \
 	reconstruct.o \
 	write_manifest.o
 
+ifeq ($(with_ssl),openssl)
+LIBS += $(OPENSSL_LIBS)
+endif
+
 all: pg_combinebackup
 
 pg_combinebackup: $(OBJS) | submake-libpgport submake-libpgfeutils

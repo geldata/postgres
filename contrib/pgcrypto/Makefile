@@ -58,6 +58,10 @@ include $(top_builddir)/src/Makefile.global
 include $(top_srcdir)/contrib/contrib-global.mk
 endif
 
+ifeq ($(with_ssl),openssl)
+LIBS += $(OPENSSL_LIBS)
+endif
+
 # Add libraries that pgcrypto depends (or might depend) on into the
 # shared library link.  (The order in which you list them here doesn't
 # matter.)

@@ -1289,11 +1289,39 @@ Use --without-readline to disable readline support.])
 fi
 
 if test "$with_zlib" = yes; then
-  AC_CHECK_LIB(z, inflate, [],
-               [AC_MSG_ERROR([zlib library not found
+  have_zlib=missing
+  PKG_CHECK_MODULES(
+    [ZLIB], [zlib], [
+      have_zlib=yes
+    ], [
+      pgac_save_CPPFLAGS=$CPPFLAGS
+      CPPFLAGS="$CFLAGS $ZLIB_CFLAGS"
+      pgac_save_LDFLAGS=$LDFLAGS
+      LDFLAGS="$LDFLAGS $ZLIB_LIBS"
+      pgac_save_LIBS=$LIBS
+
+      AC_CHECK_LIB(z, inflate, [
+        ZLIB_CFLAGS=${ZLIB_CFLAGS-""}
+        ZLIB_LIBS=${ZLIB_LIBS-"-lz"}
+        have_zlib=yes
+      ])
+
+      CPPFLAGS=$pgac_save_CPPFLAGS
+      LDFLAGS=$pgac_save_LDFLAGS
+      LIBS=$pgac_save_LIBS
+    ]
+  )
+
+  AS_VAR_IF([have_zlib], [yes], [
+    AC_DEFINE(HAVE_LIBZ, 1, [Define to 1 if you have zlib.])
+    LIBS="-lz $LIBS"
+    LDFLAGS="$LDFLAGS $ZLIB_LIBS"
+  ], [
+    AC_MSG_ERROR([zlib library not found
 If you have zlib already installed, see config.log for details on the
 failure.  It is possible the compiler isn't looking in the proper directory.
-Use --without-zlib to disable zlib support.])])
+Use --without-zlib to disable zlib support.])
+  ])
 fi
 
 if test "$enable_spinlocks" = yes; then
@@ -1335,9 +1363,17 @@ fi
 
 if test "$with_ssl" = openssl ; then
   dnl Order matters!
+  PKG_CHECK_MODULES(OPENSSL, openssl)
   # Minimum required OpenSSL version is 1.0.2
   AC_DEFINE(OPENSSL_API_COMPAT, [0x10002000L],
             [Define to the OpenSSL API version in use. This avoids deprecation warnings from newer OpenSSL versions.])
+
+  pgac_save_CPPFLAGS=$CPPFLAGS
+  CPPFLAGS="$CFLAGS $OPENSSL_CFLAGS $ZLIB_CFLAGS"
+  pgac_save_LDFLAGS=$LDFLAGS
+  LDFLAGS="$LDFLAGS $OPENSSL_LIBS $ZLIB_LIBS"
+  pgac_save_LIBS=$LIBS
+
   if test "$PORTNAME" != "win32"; then
      AC_CHECK_LIB(crypto, CRYPTO_new_ex_data, [], [AC_MSG_ERROR([library 'crypto' is required for OpenSSL])])
      AC_CHECK_LIB(ssl,    SSL_new, [], [AC_MSG_ERROR([library 'ssl' is required for OpenSSL])])
@@ -1360,6 +1396,10 @@ if test "$with_ssl" = openssl ; then
   # Function introduced in OpenSSL 1.1.1.
   AC_CHECK_FUNCS([X509_get_signature_info SSL_CTX_set_num_tickets])
   AC_DEFINE([USE_OPENSSL], 1, [Define to 1 to build with OpenSSL support. (--with-ssl=openssl)])
+
+  CPPFLAGS=$pgac_save_CPPFLAGS
+  LDFLAGS=$pgac_save_LDFLAGS
+  LIBS=$pgac_save_LIBS
 elif test "$with_ssl" != no ; then
   AC_MSG_ERROR([--with-ssl must specify openssl])
 fi
@@ -1436,12 +1476,51 @@ if test "$with_uuid" = bsd ; then
     [UUID_LIBS=""],
     [AC_MSG_ERROR([BSD UUID functions are not present])])
 elif test "$with_uuid" = e2fs ; then
+  have_uuid=missing
+
+  PKG_CHECK_MODULES(
+    [UUID], [uuid >= 2.20], [
+      have_uuid=yes
+    ], [
+      pgac_save_CPPFLAGS=$CPPFLAGS
+      CPPFLAGS="$CFLAGS $UUID_CFLAGS"
+      pgac_save_LDFLAGS=$LDFLAGS
+      LDFLAGS="$LDFLAGS $UUID_LIBS"
+      pgac_save_LIBS=$LIBS
+
+      AC_CHECK_HEADERS([uuid/uuid.h], [
+        AC_CHECK_LIB([uuid], [uuid_generate_time], [have_uuid=yes])
+      ], [
+        AC_CHECK_HEADERS([uuid.h], [
+          AC_CHECK_LIB([uuid], [uuid_generate_time], [have_uuid=yes])
+        ])
+      ])
+
+      AS_VAR_IF([have_uuid], [yes], [
+        UUID_CFLAGS=${UUID_CFLAGS-""}
+        UUID_LIBS=${UUID_LIBS-"-luuid"}
+      ])
+
+      CPPFLAGS=$pgac_save_CPPFLAGS
+      LDFLAGS=$pgac_save_LDFLAGS
+      LIBS=$pgac_save_LIBS
+    ]
+  )
+
   # On macOS, the UUID functions are in libc
-  AC_CHECK_FUNC(uuid_generate,
-    [UUID_LIBS=""],
-    [AC_CHECK_LIB(uuid, uuid_generate,
-      [UUID_LIBS="-luuid"],
-      [AC_MSG_ERROR([library 'uuid' is required for E2FS UUID])])])
+  AS_VAR_IF([have_uuid], [missing], [
+    AC_CHECK_HEADERS([uuid/uuid.h], [
+      AC_CHECK_FUNC([uuid_generate_time], [
+        have_uuid=yes
+        UUID_CFLAGS=${UUID_CFLAGS-""}
+        UUID_LIBS=${UUID_LIBS-""}
+      ])
+    ])
+  ])
+
+  AS_VAR_IF([have_uuid], [missing], [
+    AC_MSG_ERROR([library 'uuid' is required for E2FS UUID])
+  ])
 elif test "$with_uuid" = ossp ; then
   AC_CHECK_LIB(ossp-uuid, uuid_export,
     [UUID_LIBS="-lossp-uuid"],
@@ -1514,10 +1593,13 @@ Use --without-readline to disable libedit support.])])])])
 fi
 
 if test "$with_zlib" = yes; then
+  pgac_save_CPPFLAGS="$CPPFLAGS"
+  CPPFLAGS="$CPPFLAGS $ZLIB_CFLAGS"
   AC_CHECK_HEADER(zlib.h, [], [AC_MSG_ERROR([zlib header not found
 If you have zlib already installed, see config.log for details on the
 failure.  It is possible the compiler isn't looking in the proper directory.
 Use --without-zlib to disable zlib support.])])
+  CPPFLAGS="$pgac_save_CPPFLAGS"
 fi
 
 PGAC_PATH_PROGS(LZ4, lz4)
@@ -1541,8 +1623,11 @@ PGAC_PATH_PROGS(OPENSSL, openssl)
 pgac_openssl_version="$($OPENSSL version 2> /dev/null || echo openssl not found)"
 AC_MSG_NOTICE([using openssl: $pgac_openssl_version])
 if test "$with_ssl" = openssl ; then
+  pgac_save_CPPFLAGS="$CPPFLAGS"
+  CPPFLAGS="$CPPFLAGS $OPENSSL_CFLAGS"
   AC_CHECK_HEADER(openssl/ssl.h, [], [AC_MSG_ERROR([header file <openssl/ssl.h> is required for OpenSSL])])
   AC_CHECK_HEADER(openssl/err.h, [], [AC_MSG_ERROR([header file <openssl/err.h> is required for OpenSSL])])
+  CPPFLAGS="$pgac_save_CPPFLAGS"
 fi
 
 if test "$with_pam" = yes ; then
@@ -1591,6 +1676,9 @@ dnl If you want to use Apple's own Bonjour code on another platform,
 dnl just add -ldns_sd to LIBS manually.
 fi
 
+pgac_save_CPPFLAGS=$CPPFLAGS
+CPPFLAGS="$CFLAGS $UUID_CFLAGS"
+
 # for contrib/uuid-ossp
 if test "$with_uuid" = bsd ; then
   AC_CHECK_HEADERS(uuid.h,
@@ -1614,6 +1702,8 @@ elif test "$with_uuid" = ossp ; then
         [AC_MSG_ERROR([header file <uuid.h> does not match OSSP UUID library])])],
       [AC_MSG_ERROR([header file <ossp/uuid.h> or <uuid.h> is required for OSSP UUID])])])
 fi
+
+CPPFLAGS=$pgac_save_CPPFLAGS
 
 if test "$PORTNAME" = "win32" ; then
    AC_CHECK_HEADERS(crtdefs.h)
@@ -1658,6 +1748,18 @@ AC_CHECK_TYPES([struct option], [], [],
 [#ifdef HAVE_GETOPT_H
 #include <getopt.h>
 #endif])
+
+if test "$with_zlib" = yes; then
+  # Check that <zlib.h> defines z_streamp (versions before about 1.0.4
+  # did not).  While we could work around the lack of z_streamp, it
+  # seems unwise to encourage people to use such old zlib versions...
+  pgac_save_CPPFLAGS="$CPPFLAGS"
+  CPPFLAGS="$CPPFLAGS $ZLIB_CFLAGS"
+  AC_CHECK_TYPE(z_streamp, [], [AC_MSG_ERROR([zlib version is too old
+Use --without-zlib to disable zlib support.])],
+                [#include <zlib.h>])
+  CPPFLAGS="$pgac_save_CPPFLAGS"
+fi
 
 case $host_cpu in
   x86_64)

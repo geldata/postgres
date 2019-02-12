@@ -276,7 +276,7 @@
 /* Define to 1 if you have the `xslt' library (-lxslt). */
 #undef HAVE_LIBXSLT
 
-/* Define to 1 if you have the `z' library (-lz). */
+/* Define to 1 if you have zlib. */
 #undef HAVE_LIBZ
 
 /* Define to 1 if you have the `zstd' library (-lzstd). */
