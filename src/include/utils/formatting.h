@@ -19,6 +19,7 @@
 
 #include "fmgr.h"
 
+#include "utils/date.h"
 
 extern char *str_tolower(const char *buff, size_t nbytes, Oid collid);
 extern char *str_toupper(const char *buff, size_t nbytes, Oid collid);
@@ -27,5 +28,9 @@ extern char *str_initcap(const char *buff, size_t nbytes, Oid collid);
 extern char *asc_tolower(const char *buff, size_t nbytes);
 extern char *asc_toupper(const char *buff, size_t nbytes);
 extern char *asc_initcap(const char *buff, size_t nbytes);
+
+extern void EdgeDBToTimestamp(
+	text *date_txt, text *fmt,
+	struct pg_tm *tm, fsec_t *fsec, int tzmode);
 
 #endif

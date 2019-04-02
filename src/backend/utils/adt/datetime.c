@@ -764,8 +764,9 @@ ParseDateTime(const char *timestr, char *workbuf, size_t buflen,
  * 1997-05-27
  */
 int
-DecodeDateTime(char **field, int *ftype, int nf,
-			   int *dtype, struct pg_tm *tm, fsec_t *fsec, int *tzp)
+EdgeDBDecodeDateTime(char **field, int *ftype, int nf,
+			   int *dtype, struct pg_tm *tm, fsec_t *fsec, int *tzp,
+			   int tzmode)
 {
 	int			fmask = 0,
 				tmask,
@@ -1431,12 +1432,26 @@ DecodeDateTime(char **field, int *ftype, int nf,
 			if (fmask & DTK_M(DTZMOD))
 				return DTERR_BAD_FORMAT;
 
+			if (tzmode == EDGEDB_TZ_REQUIRED)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_DATETIME_FORMAT),
+						 errmsg("missing required timezone specification")));
+
 			*tzp = DetermineTimeZoneOffset(tm, session_timezone);
 		}
 	}
 
 	return 0;
 }
+
+
+int
+DecodeDateTime(char **field, int *ftype, int nf,
+			   int *dtype, struct pg_tm *tm, fsec_t *fsec, int *tzp)
+{
+	return EdgeDBDecodeDateTime(field, ftype, nf, dtype, tm, fsec, tzp, EDGEDB_TZ_OPTIONAL);
+}
+
 
 
 /* DetermineTimeZoneOffset()

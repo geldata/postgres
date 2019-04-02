@@ -338,4 +338,13 @@ extern TimeZoneAbbrevTable *ConvertTimeZoneAbbrevs(struct tzEntry *abbrevs,
 					   int n);
 extern void InstallTimeZoneAbbrevs(TimeZoneAbbrevTable *tbl);
 
+#define EDGEDB_TZ_OPTIONAL 0
+#define EDGEDB_TZ_REQUIRED 1
+#define EDGEDB_TZ_PROHIBITED 2
+
+extern int EdgeDBDecodeDateTime(char **field, int *ftype,
+		int nf, int *dtype,
+		struct pg_tm *tm, fsec_t *fsec, int *tzp,
+		int tzmode);
+
 #endif							/* DATETIME_H */

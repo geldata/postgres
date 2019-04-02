@@ -960,7 +960,7 @@ static void parse_format(FormatNode *node, const char *str, const KeyWord *kw,
 
 static void DCH_to_char(FormatNode *node, bool is_interval,
 			TmToChar *in, char *out, Oid collid);
-static void DCH_from_char(FormatNode *node, char *in, TmFromChar *out);
+static void DCH_from_char(FormatNode *node, char *in, TmFromChar *out, int tzmode);
 
 #ifdef DEBUG_TO_FROM_CHAR
 static void dump_index(const KeyWord *k, const int *index);
@@ -2979,7 +2979,7 @@ DCH_to_char(FormatNode *node, bool is_interval, TmToChar *in, char *out, Oid col
  * ----------
  */
 static void
-DCH_from_char(FormatNode *node, char *in, TmFromChar *out)
+DCH_from_char(FormatNode *node, char *in, TmFromChar *out, int tzmode)
 {
 	FormatNode *n;
 	char	   *s;
@@ -2996,7 +2996,36 @@ DCH_from_char(FormatNode *node, char *in, TmFromChar *out)
 			 * we don't insist that the consumed character match the format's
 			 * character.
 			 */
-			s += pg_mblen(s);
+			int			chlen;
+
+			chlen = pg_mblen(s);
+
+			if (tzmode == EDGEDB_TZ_OPTIONAL)
+			{
+				/* Default PostgreSQL behavior. */
+				s += chlen;
+			}
+			else
+			{
+				/* EdgeDB: make sure that the consumed character matches
+				 * the format's character exactly.
+				 */
+				if (strlen(n->character) != chlen || memcmp(n->character, s, chlen))
+				{
+					char		ch[MAX_MULTIBYTE_CHAR_LEN + 1];
+
+					memcpy(ch, s, chlen);
+					ch[chlen] = '\0';
+
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_DATETIME_FORMAT),
+							 errmsg("expected `%s`, got `%s`",
+								n->character, ch)));
+				}
+
+				s += chlen;
+			}
+
 			continue;
 		}
 
@@ -3260,6 +3289,14 @@ DCH_from_char(FormatNode *node, char *in, TmFromChar *out)
 				SKIP_THth(s, n->suffix);
 				break;
 		}
+	}
+
+	if (tzmode != EDGEDB_TZ_OPTIONAL && *s != '\0')
+	{
+		/* EdgeDB: require the string to fully match the format. */
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_DATETIME_FORMAT),
+				 errmsg("format does not fully match the input string")));
 	}
 }
 
@@ -3632,8 +3669,8 @@ to_date(PG_FUNCTION_ARGS)
  * struct 'tm' and 'fsec'.
  */
 static void
-do_to_timestamp(text *date_txt, text *fmt,
-				struct pg_tm *tm, fsec_t *fsec)
+_do_to_timestamp(text *date_txt, text *fmt,
+				struct pg_tm *tm, fsec_t *fsec, int tzmode)
 {
 	FormatNode *format;
 	TmFromChar	tmfc;
@@ -3686,7 +3723,7 @@ do_to_timestamp(text *date_txt, text *fmt,
 		/* dump_index(DCH_keywords, DCH_index); */
 #endif
 
-		DCH_from_char(format, date_str, &tmfc);
+		DCH_from_char(format, date_str, &tmfc, tzmode);
 
 		pfree(fmt_str);
 		if (!incache)
@@ -3900,6 +3937,12 @@ do_to_timestamp(text *date_txt, text *fmt,
 	{
 		char	   *tz;
 
+		if (tzmode == EDGEDB_TZ_PROHIBITED)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_DATETIME_FORMAT),
+					 errmsg("cannot convert to timestamp: "
+							"unexpected timezone specification")));
+
 		if (tmfc.tzh < 0 || tmfc.tzh > MAX_TZDISP_HOUR ||
 			tmfc.tzm < 0 || tmfc.tzm >= MINS_PER_HOUR)
 			DateTimeParseError(DTERR_TZDISP_OVERFLOW, date_str, "timestamp");
@@ -3909,10 +3952,32 @@ do_to_timestamp(text *date_txt, text *fmt,
 
 		tm->tm_zone = tz;
 	}
+	else
+		if (tzmode == EDGEDB_TZ_REQUIRED)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_DATETIME_FORMAT),
+					 errmsg("cannot convert to timestamptz: "
+							"missing required timezone specification")));
 
 	DEBUG_TM(tm);
 
 	pfree(date_str);
+}
+
+
+static void
+do_to_timestamp(text *date_txt, text *fmt,
+				struct pg_tm *tm, fsec_t *fsec)
+{
+	_do_to_timestamp(date_txt, fmt, tm, fsec, EDGEDB_TZ_OPTIONAL);
+}
+
+
+void
+EdgeDBToTimestamp(text *date_txt, text *fmt,
+				struct pg_tm *tm, fsec_t *fsec, int tzmode)
+{
+	_do_to_timestamp(date_txt, fmt, tm, fsec, tzmode);
 }
 
 
