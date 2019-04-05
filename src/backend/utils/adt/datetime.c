@@ -4367,6 +4367,7 @@ EncodeInterval(struct pg_tm *tm, fsec_t fsec, int style, char *str)
 			break;
 
 			/* Compatible with postgresql < 8.4 when DateStyle = 'iso' */
+		case INTSTYLE_EDGEDB:
 		case INTSTYLE_POSTGRES:
 			cp = AddPostgresIntPart(cp, year, "year", &is_zero, &is_before);
 
@@ -4375,7 +4376,10 @@ EncodeInterval(struct pg_tm *tm, fsec_t fsec, int style, char *str)
 			 * "day".  However, for backward compatibility, we can't easily
 			 * fix this.  bjm 2011-05-24
 			 */
-			cp = AddPostgresIntPart(cp, mon, "mon", &is_zero, &is_before);
+			if (style == INTSTYLE_POSTGRES)
+				cp = AddPostgresIntPart(cp, mon, "mon", &is_zero, &is_before);
+			else
+				cp = AddPostgresIntPart(cp, mon, "month", &is_zero, &is_before);
 			cp = AddPostgresIntPart(cp, mday, "day", &is_zero, &is_before);
 			if (is_zero || hour != 0 || min != 0 || sec != 0 || fsec != 0)
 			{
