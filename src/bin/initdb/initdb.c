@@ -81,6 +81,7 @@
 #include "getopt_long.h"
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
+#include "port/popen.h"
 
 
 /* Ideally this would be in a .h file, but it hardly seems worth the trouble */
@@ -690,7 +691,7 @@ popen_check(const char *command, const char *mode)
 
 	fflush(NULL);
 	errno = 0;
-	cmdfd = popen(command, mode);
+	cmdfd = pg_popen(command, mode);
 	if (cmdfd == NULL)
 		pg_log_error("could not execute command \"%s\": %m", command);
 	return cmdfd;

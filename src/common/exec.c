@@ -43,6 +43,7 @@
 #endif
 
 #include "common/string.h"
+#include "port/popen.h"
 
 /* Inhibit mingw CRT's auto-globbing of command line arguments */
 #if defined(WIN32) && !defined(_MSC_VER)
@@ -376,7 +377,7 @@ pipe_read_line(char *cmd)
 	fflush(NULL);
 
 	errno = 0;
-	if ((pipe_cmd = popen(cmd, "r")) == NULL)
+	if ((pipe_cmd = pg_popen(cmd, "r")) == NULL)
 	{
 		log_error(errcode(ERRCODE_SYSTEM_ERROR),
 				  _("could not execute command \"%s\": %m"), cmd);
@@ -412,7 +413,7 @@ pclose_check(FILE *stream)
 	int			exitstatus;
 	char	   *reason;
 
-	exitstatus = pclose(stream);
+	exitstatus = pg_pclose(stream);
 
 	if (exitstatus == 0)
 		return 0;				/* all is well */

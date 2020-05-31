@@ -71,6 +71,7 @@ OBJS_COMMON = \
 	pg_lzcompress.o \
 	pg_prng.o \
 	pgfnames.o \
+	popen.o \
 	psprintf.o \
 	relpath.o \
 	rmtree.o \

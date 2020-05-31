@@ -27,6 +27,7 @@
 #include "common/logging.h"
 #include "common/string.h"
 #include "getopt_long.h"
+#include "port/popen.h"
 #include "utils/pidfile.h"
 
 #ifdef WIN32					/* on Unix, we don't need libpq */
@@ -912,7 +913,7 @@ do_init(void)
 					   exec_path, pgdata_opt, post_opts, DEVNULL);
 
 	fflush(NULL);
-	if (system(cmd) != 0)
+	if (pg_system(cmd) != 0)
 	{
 		write_stderr(_("%s: database system initialization failed\n"), progname);
 		exit(1);
