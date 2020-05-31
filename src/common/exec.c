@@ -33,6 +33,8 @@
 #endif
 #endif
 
+#include "port/popen.h"
+
 /* Inhibit mingw CRT's auto-globbing of command line arguments */
 #if defined(WIN32) && !defined(_MSC_VER)
 extern int _CRT_glob = 0; /* 0 turns off globbing; 1 turns it on */
@@ -377,7 +379,7 @@ pipe_read_line(char *cmd, char *line, int maxsize)
 	fflush(stderr);
 
 	errno = 0;
-	if ((pgver = popen(cmd, "r")) == NULL)
+	if ((pgver = pg_popen(cmd, "r")) == NULL)
 	{
 		perror("popen failure");
 		return NULL;
@@ -410,7 +412,7 @@ pclose_check(FILE *stream)
 	int			exitstatus;
 	char	   *reason;
 
-	exitstatus = pclose(stream);
+	exitstatus = pg_pclose(stream);
 
 	if (exitstatus == 0)
 		return 0;				/* all is well */
