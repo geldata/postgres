@@ -415,6 +415,7 @@ sub GenerateFiles
 		HAVE_SYS_UCRED_H                         => undef,
 		HAVE_SYS_UIO_H                           => undef,
 		HAVE_SYS_UN_H                            => undef,
+		HAVE_SYS_UTSNAME_H                       => undef,
 		HAVE_TERMIOS_H                           => undef,
 		HAVE_TYPEOF                              => undef,
 		HAVE_UCRED_H                             => undef,

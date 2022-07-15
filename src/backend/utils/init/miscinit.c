@@ -120,6 +120,7 @@ InitPostmasterChild(void)
 	/* In EXEC_BACKEND case we will not have inherited BlockSig etc values */
 #ifdef EXEC_BACKEND
 	pqinitmask();
+	IsUnderWSL1 = DetectWSL1();
 #endif
 
 	/* Initialize process-local latch support */

@@ -81,6 +81,10 @@
 #include <sys/select.h>
 #endif
 
+#ifdef HAVE_SYS_UTSNAME_H
+#include <sys/utsname.h>
+#endif
+
 #ifdef USE_BONJOUR
 #include <dns_sd.h>
 #endif
@@ -1127,6 +1131,11 @@ PostmasterMain(int argc, char *argv[])
 	 */
 	ereport(LOG,
 			(errmsg("starting %s", PG_VERSION_STR)));
+
+	IsUnderWSL1 = DetectWSL1();
+	if (IsUnderWSL1)
+		ereport(LOG,
+				(errmsg("detected WSL1, applying workarounds")));
 
 	/*
 	 * Establish input sockets.
@@ -2675,6 +2684,31 @@ InitProcessGlobals(void)
 			((uint64) MyStartTimestamp >> 20);
 	}
 	srandom(rseed);
+}
+
+
+/*
+ * DetectWSL1 -- detect if we are running under WSL1
+ */
+bool
+DetectWSL1(void)
+{
+#ifdef HAVE_SYS_UTSNAME_H
+	int rc;
+	struct utsname buf;
+
+	memset(&buf, 0, sizeof buf);
+	rc = uname(&buf);
+	if (rc != 0) {
+		ereport(WARNING,
+				(errmsg("could not determine current kernel release version")));
+		return false;
+	} else {
+		return pg_str_endswith(buf.release, "-Microsoft");
+	}
+#else
+	return false;
+#endif
 }
 
 
