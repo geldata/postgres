@@ -117,6 +117,11 @@ bool		IsPostmasterEnvironment = false;
 bool		IsUnderPostmaster = false;
 bool		IsBinaryUpgrade = false;
 
+/*
+ * Whether we are running under WSL1, for various workarounds.
+ */
+bool		IsUnderWSL1 = false;
+
 bool		ExitOnAnyError = false;
 
 int			DateStyle = USE_ISO_DATES;

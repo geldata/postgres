@@ -334,6 +334,10 @@ InitializeLatchSupport(void)
 	if (signal_fd < 0)
 		elog(FATAL, "signalfd() failed");
 	ReserveExternalFD();
+
+	if (IsUnderWSL1)
+		/* Workaround https://github.com/microsoft/WSL/issues/8619 */
+		pqsignal(SIGURG, SIG_DFL);
 #endif
 
 #ifdef WAIT_USE_KQUEUE
