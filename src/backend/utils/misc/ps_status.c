@@ -14,6 +14,7 @@
 
 #include "postgres.h"
 
+#include <stdlib.h>
 #include <unistd.h>
 #if defined(__darwin__)
 #include <crt_externs.h>
@@ -27,6 +28,7 @@ extern char **environ;
 
 /* GUC variable */
 bool		update_process_title = DEFAULT_UPDATE_PROCESS_TITLE;
+bool		disable_ps_display = false;
 
 /*
  * Alternative ways of updating ps display:
@@ -116,8 +118,15 @@ static char **save_argv;
 char	  **
 save_ps_display_args(int argc, char **argv)
 {
+	char *disable_env = getenv("PG_DISABLE_PS_DISPLAY");
+
 	save_argc = argc;
 	save_argv = argv;
+
+	disable_ps_display = disable_env != NULL && *disable_env != '\0';
+
+	if (disable_ps_display)
+		return argv;
 
 #if defined(PS_USE_CLOBBER_ARGV)
 
@@ -266,6 +275,9 @@ save_ps_display_args(int argc, char **argv)
 void
 init_ps_display(const char *fixed_part)
 {
+	if (disable_ps_display)
+		return;
+
 #ifndef PS_USE_NONE
 	bool		save_update_process_title;
 #endif
@@ -342,6 +354,9 @@ init_ps_display(const char *fixed_part)
 static bool
 update_ps_display_precheck(void)
 {
+	if (disable_ps_display)
+		return false;
+
 	/* update_process_title=off disables updates */
 	if (!update_process_title)
 		return false;
@@ -529,6 +544,12 @@ flush_ps_display(void)
 const char *
 get_ps_display(int *displen)
 {
+	if (disable_ps_display)
+	{
+		*displen = 0;
+		return "";
+	}
+
 #ifdef PS_USE_CLOBBER_ARGV
 	/* If ps_buffer is a pointer, it might still be null */
 	if (!ps_buffer)
