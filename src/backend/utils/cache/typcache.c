@@ -1410,6 +1410,24 @@ DomainHasConstraints(Oid type_id)
 	return (typentry->domainData != NULL);
 }
 
+/*
+ * DomainIsStrict --- routine to check if a domain has a NOT NULL constraint
+ */
+bool
+DomainIsStrict(Oid type_id)
+{
+	HeapTuple	tup;
+	Form_pg_type typTup;
+	bool notnull;
+
+	tup = SearchSysCache1(TYPEOID, ObjectIdGetDatum(type_id));
+	if (!HeapTupleIsValid(tup))
+		elog(ERROR, "cache lookup failed for type %u", type_id);
+	typTup = (Form_pg_type) GETSTRUCT(tup);
+	notnull = typTup->typnotnull;
+	ReleaseSysCache(tup);
+	return notnull;
+}
 
 /*
  * array_element_has_equality and friends are helper routines to check
