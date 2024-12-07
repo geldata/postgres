@@ -7268,6 +7268,18 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 		else
 			defval = (Expr *) build_column_default(rel, attribute->attnum);
 
+		/*
+		 * EdgeQL does not allow for NULL checks in domain constraints,
+		 * so we can safely skip an expensive table rewrite (though keep
+		 * it for domains declared as NOT NULL just in case something
+		 * somewhere uses them outside of EdgeQL schema).
+		 */
+		if ((!defval && DomainIsStrict(attribute->atttypid))
+			|| (defval && DomainHasConstraints(attribute->atttypid)))
+		{
+			tab->rewrite |= AT_REWRITE_DEFAULT_VAL;
+		}
+
 		if (!defval && DomainHasConstraints(attribute->atttypid))
 		{
 			Oid			baseTypeId;
@@ -7301,9 +7313,6 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 
 			tab->newvals = lappend(tab->newvals, newval);
 		}
-
-		if (DomainHasConstraints(attribute->atttypid))
-			tab->rewrite |= AT_REWRITE_DEFAULT_VAL;
 
 		if (!TupleDescAttr(rel->rd_att, attribute->attnum - 1)->atthasmissing)
 		{
