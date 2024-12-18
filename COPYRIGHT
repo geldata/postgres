@@ -1,3 +1,7 @@
+edb_stat_statements is a fork of contrib/pg_stat_statements of PostgreSQL.
+
+Portions Copyright (c) 2024-present MagicStack Inc. and the EdgeDB authors.
+
 PostgreSQL Database Management System
 (formerly known as Postgres, then as Postgres95)
 
