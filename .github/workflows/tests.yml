@@ -1,0 +1,64 @@
+name: stat tests
+
+on:
+  push:
+    branches:
+      - edb_stat_statements
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        pg: [ 16, 17 ]
+        gel: [ 6.0-beta.1, nightly ]
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Get Postgres revision
+        run: |
+          echo "PG_REV=$(git ls-remote origin refs/heads/gel/REL_${{ matrix.pg }}_STABLE | awk '{print $1}')" >> $GITHUB_ENV
+
+      - name: PostgreSQL installation cache
+        uses: actions/cache@v4
+        id: pg-cache
+        with:
+          path: pg
+          key: stat-pg-${{ env.PG_REV }}
+
+      - name: Checkout PostgreSQL source
+        uses: actions/checkout@v4
+        if: steps.pg-cache.outputs.cache-hit != 'true'
+        with:
+          path: postgres
+          ref: gel/REL_${{ matrix.pg }}_STABLE
+
+      - name: Install system dependencies
+        if: steps.pg-cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y uuid-dev libreadline-dev
+
+      - name: Build Postgres
+        if: steps.pg-cache.outputs.cache-hit != 'true'
+        run: |
+          cd postgres
+          ./configure --with-openssl --with-uuid=e2fs --prefix=$GITHUB_WORKSPACE/pg
+          make
+          make install
+
+      - name: Download Gel server
+        uses: edgedb/setup-edgedb@v1.3.0
+        with:
+          server-version: ${{ matrix.gel }}
+
+      - name: Test
+        run: |
+          ls pg
+          ./pg/bin/pg_config
